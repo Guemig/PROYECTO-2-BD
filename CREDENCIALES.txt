@@ -1,0 +1,9 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyAJLwPotLQODCP-aSu33d8j6ujGnL_auoU",
+  authDomain: "test-gym-sdo-corte.firebaseapp.com",
+  projectId: "test-gym-sdo-corte",
+  storageBucket: "test-gym-sdo-corte.firebasestorage.app",
+  messagingSenderId: "240924685368",
+  appId: "1:240924685368:web:4677bf3dbba98a6f4ba2cd",
+  measurementId: "G-QJ7QCZSNQY"
+};
