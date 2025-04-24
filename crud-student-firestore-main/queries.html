@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>High Score Queries</title>
+  <script type="module">
+    import { FirestoreQuery } from './FirestoreQuery.js';
+    import { db } from './firebase_init.js';
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnQuery = document.getElementById("runQuery");
+      const output = document.getElementById("results");
+
+      const btnAvg = document.getElementById("getAverage");
+      const outputAvg = document.getElementById("averageOutput");
+
+      btnQuery.addEventListener("click", async () => {
+        const courseId = document.getElementById("courseId").value;
+        const studentId = document.getElementById("studentId").value;
+        const collectionPath = `Courses/${courseId}/Students/${studentId}/Performance`;
+
+        const fq = new FirestoreQuery(collectionPath);
+
+        try {
+          const results = await fq.getHighScoresOrdered();
+
+          if (results.length === 0) {
+            output.innerHTML = "<li>No se encontraron registros con score > 4.0.</li>";
+            return;
+          }
+
+          output.innerHTML = results.map(r => `
+            <li>
+              <strong>Score:</strong> ${r.score} <br>
+              <strong>Timestamp:</strong> ${r.timestamp} <br>
+              <strong>Comment:</strong> ${r.comment}
+            </li>
+          `).join('');
+        } catch (error) {
+          console.error("Error ejecutando consulta:", error);
+          output.innerHTML = "<li>Error ejecutando la consulta. ¿Falta un índice compuesto?</li>";
+        }
+      });
+
+      btnAvg.addEventListener("click", async () => {
+        const courseId = document.getElementById("courseId").value;
+        const studentId = document.getElementById("studentId").value;
+        const collectionPath = `Courses/${courseId}/Students/${studentId}/Performance`;
+
+        const fq = new FirestoreQuery(collectionPath);
+        const avg = await fq.getAverageScore();
+
+        outputAvg.innerText = `Promedio: ${avg.toFixed(2)}`;
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>Consultar Rendimiento</h1>
+
+  <label>Course ID: <input type="text" id="courseId" value="curso123"></label><br>
+  <label>Student ID: <input type="text" id="studentId" value="estudiante456"></label><br>
+
+  <button id="runQuery">Consultar Scores > 4.0</button>
+  <button id="getAverage">Obtener Promedio</button>
+
+  <h2>Resultados:</h2>
+  <ul id="results"></ul>
+
+  <h2>Promedio:</h2>
+  <p id="averageOutput"></p>
+</body>
+</html>

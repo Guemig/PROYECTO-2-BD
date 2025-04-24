@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>High Score Queries</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7fc;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #4CAF50;
+      margin-top: 20px;
+    }
+
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section h2 {
+      color: #333;
+      font-size: 1.5rem;
+    }
+
+    .section input[type="text"], .section input[type="number"] {
+      padding: 10px;
+      width: 250px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      margin-right: 10px;
+    }
+
+    .section button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .section button:hover {
+      background-color: #45a049;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background-color: #f9f9f9;
+      padding: 10px;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+
+    .output-container {
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+
+    .output-container p {
+      margin: 0;
+      color: #333;
+    }
+    
+    .btn-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+  </style>
+  <script type="module">
+    import { FirestoreQuery } from './FirestoreQuery.js';
+    import { db } from './firebase_init.js';
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnQuery = document.getElementById("runQuery");
+      const output = document.getElementById("results");
+
+      const btnAvg = document.getElementById("getAverage");
+      const outputAvg = document.getElementById("averageOutput");
+
+      const btnTopStudents = document.getElementById("getTopStudents");
+      const outputTop = document.getElementById("topResults");
+
+      const btnAddRandomData = document.getElementById("addRandomData");
+      const outputRandom = document.getElementById("randomDataOutput");
+
+      // Consulta para obtener scores mayores a 4.0 de un estudiante específico
+      btnQuery.addEventListener("click", async () => {
+        const courseId = document.getElementById("courseId").value;
+        const studentId = document.getElementById("studentId").value;
+        const collectionPath = `Courses/${courseId}/Students/${studentId}/Performance`;
+
+        const fq = new FirestoreQuery(collectionPath);
+
+        try {
+          const results = await fq.getHighScoresOrdered();
+
+          if (results.length === 0) {
+            output.innerHTML = "<li>No se encontraron registros con score > 4.0.</li>";
+            return;
+          }
+
+          output.innerHTML = results.map(r => `
+            <li>
+              <strong>Score:</strong> ${r.score} <br>
+              <strong>Timestamp:</strong> ${r.timestamp} <br>
+              <strong>Comment:</strong> ${r.comment}
+            </li>
+          `).join('');
+        } catch (error) {
+          console.error("Error ejecutando consulta:", error);
+          output.innerHTML = "<li>Error ejecutando la consulta. ¿Falta un índice compuesto?</li>";
+        }
+      });
+
+      // Consulta para obtener el promedio de un estudiante específico
+      btnAvg.addEventListener("click", async () => {
+        const courseId = document.getElementById("courseId").value;
+        const studentId = document.getElementById("studentId").value;
+        const collectionPath = `Courses/${courseId}/Students/${studentId}/Performance`;
+
+        const fq = new FirestoreQuery(collectionPath);
+        const avg = await fq.getAverageScore();
+
+        outputAvg.innerText = `Promedio: ${avg.toFixed(2)}`;
+      });
+
+      // Consulta para obtener los mejores estudiantes de todos los cursos
+      btnTopStudents.addEventListener("click", async () => {
+        const fq = new FirestoreQuery("TopStudents"); // Usamos la colección TopStudents
+
+        try {
+          const topStudents = await fq.getTopStudents();
+
+          if (topStudents.length === 0) {
+            outputTop.innerHTML = "<li>No se encontraron top students.</li>";
+            return;
+          }
+
+          outputTop.innerHTML = topStudents.map(r => `
+            <li>
+              <strong>Student ID:</strong> ${r.studentId} <br>
+              <strong>Course ID:</strong> ${r.courseId} <br>
+              <strong>Score:</strong> ${r.score} <br>
+              <strong>Timestamp:</strong> ${r.timestamp} <br>
+              <strong>Comment:</strong> ${r.comment}
+            </li>
+          `).join('');
+        } catch (error) {
+          console.error("Error ejecutando consulta:", error);
+          outputTop.innerHTML = "<li>Error ejecutando la consulta.</li>";
+        }
+      });
+
+      // Agregar datos aleatorios de estudiantes
+      btnAddRandomData.addEventListener("click", async () => {
+        const randomCourseId = `course_${Math.floor(Math.random() * 1000)}`;
+        const randomStudentId = `student_${Math.floor(Math.random() * 1000)}`;
+        const randomScore = (Math.random() * 5).toFixed(2);  // Puntuaciones aleatorias entre 0 y 5
+        const randomComment = `Comentario aleatorio ${Math.floor(Math.random() * 1000)}`;
+        const timestamp = new Date().toISOString();
+
+        const fq = new FirestoreQuery(`Courses/${randomCourseId}/Students/${randomStudentId}/Performance`);
+
+        try {
+          // Agregar el puntaje aleatorio a la base de datos
+          await fq.addPerformanceAndUpdateTop(randomCourseId, randomStudentId, randomScore, timestamp, randomComment);
+          outputRandom.innerHTML = `<p>Datos aleatorios agregados:<br> Course ID: ${randomCourseId} | Student ID: ${randomStudentId} | Score: ${randomScore} | Comment: ${randomComment}</p>`;
+        } catch (error) {
+          console.error("Error al agregar datos aleatorios:", error);
+          outputRandom.innerHTML = "<p>Error al agregar datos aleatorios.</p>";
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>Consultar Rendimiento de Estudiantes</h1>
+
+  <div class="container">
+    <div class="section">
+      <h2>Consultar Scores > 4.0</h2>
+      <div>
+        <label for="courseId">Course ID:</label>
+        <input type="text" id="courseId" value="curso123">
+        <label for="studentId">Student ID:</label>
+        <input type="text" id="studentId" value="estudiante456">
+      </div>
+      <div class="btn-container">
+        <button id="runQuery">Consultar Scores > 4.0</button>
+        <button id="getAverage">Obtener Promedio</button>
+        <button id="getTopStudents">Obtener Top Estudiantes</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Generar Datos Aleatorios</h2>
+      <button id="addRandomData">Generar Datos Aleatorios</button>
+    </div>
+
+    <div class="output-container">
+      <h2>Resultados:</h2>
+      <ul id="results"></ul>
+    </div>
+
+    <div class="output-container">
+      <h2>Promedio:</h2>
+      <p id="averageOutput"></p>
+    </div>
+
+    <div class="output-container">
+      <h2>Top Estudiantes:</h2>
+      <ul id="topResults"></ul>
+    </div>
+
+    <div class="output-container">
+      <h2>Datos Aleatorios Generados:</h2>
+      <p id="randomDataOutput"></p>
+    </div>
+  </div>
+</body>
+</html>
